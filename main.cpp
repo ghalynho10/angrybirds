@@ -1,18 +1,14 @@
 
-//
-// Disclaimer:
-// ----------
-//
-// This code will work only if you selected window, graphics and audio.
-//
-// Note that the "Run Script" build phase will copy the required frameworks
-// or dylibs to your application bundle so you can execute it on any OS X
-// computer.
-//
-// Your resource files (images, sounds, fonts, ...) are also copied to your
-// application bundle. To get the path to these resources, use the helper
-// function `resourcePath()` from ResourcePath.hpp
-//
+/*
+Author: Ghaly Nicolas Jules
+Class: ECE6122
+Last Date Modified: 10/28/2021
+Description:
+This program is an implementation in C++ of an Angry Bird replica using Universities Mascott with other animals.
+ Buzzy can be launched and he is supposed to hit either the bee, the unicorn or the mascotts.
+*/
+
+#include <sstream>
 #include <iostream>
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
@@ -21,46 +17,49 @@
 #include <random>
 #include <ctime>
 #include <algorithm>
+#include <vector>
 #include "ResourcePath.hpp"
 using namespace sf;
 
-// Here is a small helper for you! Have a look.
-
-int buzzyRotation = 0;
-
-float motionTime = 0.0f;
-int score = 0;
+// Global Variables
 bool restartGame = false;
 bool hasGameStarted = false;
-bool beeActive = false;
-bool displayBee = true;
-
 bool isBuzzyActive = false;
-float beeSpeed = 0.0f;
+int buzzyRotation = 0;
+float motionTime = 0.0f;
+int score = 0;
 float buzzySpeed = 0.0f;
 float power = 0.0f;
 
+//Randomizers for generating random path
 std::default_random_engine generator;
 std::uniform_int_distribution<int> distribution(-1500, 1500);
 std::uniform_int_distribution<int> heightDist(150, 300);
 
+//Helper functions
+sf::Vector2f round(const sf::Vector2f vector);
 void centerText(sf::Text &text);
 void setOriginToCenter(sf::Sprite &sprite);
-sf::Vector2f round(const sf::Vector2f vector);
 bool CollisionChecker(sf::Sprite &buzzy, sf::Sprite &r2);
 void resetBuzzy(sf::Sprite &buzzy);
-
-
 int myrandom(int i) { return std::rand() % i; }
 
+//Main Window of the game
 int main(int, char const **)
 {
     // Create the main window
 
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "SFML window", sf::Style::Default);
 
+    bool displayBee = true;
+    bool beeActive = false;
+    float beeSpeed = 0.0f;
+    float gravity = -196.2;
+    const auto PI = std::acos(-1);
+
     std::srand(unsigned(std::time(0)));
 
+    //BuzzyLife
     sf::Texture buzzyLifeTexture;
     buzzyLifeTexture.loadFromFile(resourcePath() + "buzzy_life.png");
     std::vector<sf::Sprite> buzzyLives(5, sf::Sprite(buzzyLifeTexture));
@@ -80,7 +79,7 @@ int main(int, char const **)
     buzzy.setTexture(buzzyTexture);
     buzzy.setPosition(0, 700);
 
-    //first row
+    //first row woodland creatures
     sf::Sprite sheep;
     sf::Texture sheepTexture;
     sheepTexture.loadFromFile(resourcePath() + "sheep.png");
@@ -111,9 +110,7 @@ int main(int, char const **)
     mouse.setTexture(mouseTexture);
     setOriginToCenter(mouse);
 
-    std::vector<sf::Sprite> firstRow{sheep, bunny, dog, tiger, mouse};
-
-    //second row
+    //second row of woodland creatures
     sf::Sprite unicorn;
     sf::Texture unicornTexture;
     unicornTexture.loadFromFile(resourcePath() + "angry_unicorn.png");
@@ -136,7 +133,7 @@ int main(int, char const **)
     sf::Texture pigTexture;
     pigTexture.loadFromFile(resourcePath() + "pig.png");
     pig.setTexture(pigTexture);
-    //    setOriginToCenter(pig);
+    setOriginToCenter(pig);
 
     sf::Sprite chicken;
     sf::Texture chickenTexture;
@@ -144,16 +141,12 @@ int main(int, char const **)
     chicken.setTexture(chickenTexture);
     setOriginToCenter(chicken);
 
-    std::vector<sf::Sprite> sndRow{unicorn, frog, gaBulldog, pig, chicken};
+    std::vector<sf::Sprite> firstRow{sheep, bunny, dog, tiger, mouse};      //Vector containing the first row.
+    std::vector<sf::Sprite> sndRow{unicorn, frog, gaBulldog, pig, chicken}; //Vector containing the second row.
 
-
-
-//     Use of shuffle
-        std::random_shuffle(firstRow.begin(), firstRow.end(), myrandom);
-        std::random_shuffle(sndRow.begin(), sndRow.end(), myrandom);
-
-    const auto PI = std::acos(-1);
-    float gravity = -196.2;
+    //     Use of shuffle to change the positions
+    std::random_shuffle(firstRow.begin(), firstRow.end(), myrandom);
+    std::random_shuffle(sndRow.begin(), sndRow.end(), myrandom);
 
     //Power Bar
     sf::RectangleShape powerBar;
@@ -170,11 +163,7 @@ int main(int, char const **)
     powerBarShape.setOutlineThickness(10);
     powerBarShape.setPosition(300, 980);
 
-    sf::Time gameTimeTotal;
-
     float powerBarWidthPerSecond = 10;
-
-    // Is the bee currently moving?
 
     // Set the Icon
     sf::Image icon;
@@ -184,7 +173,7 @@ int main(int, char const **)
     }
     window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
 
-    // Load a sprite to display
+    // Load background
     sf::Texture texture;
     if (!texture.loadFromFile(resourcePath() + "background.png"))
     {
@@ -224,6 +213,14 @@ int main(int, char const **)
     centerText(instructions);
     instructions.setPosition(sf::Vector2f(window.getSize().x / 2u, 800));
 
+    sf::Text scoreText("", font);
+    scoreText.setPosition(1720, 60);
+
+    sf::Text author("", font);
+    author.setString("\t\tCreated by\n Ghaly Nicolas Jules");
+    centerText(author);
+    author.setPosition(sf::Vector2f(window.getSize().x / 2u, 900));
+
     // Load a music to play
     sf::Music music;
     if (!music.openFromFile(resourcePath() + "nice_music.ogg"))
@@ -237,14 +234,6 @@ int main(int, char const **)
     // Variables to control time itself
     sf::Clock clock;
     sf::Clock clock2;
-
-    sf::Text scoreText("", font);
-    scoreText.setPosition(1750, 60);
-
-    sf::Text author("", font);
-    author.setString("\t\tCreated by\n Ghaly Nicolas Jules");
-    centerText(author);
-    author.setPosition(sf::Vector2f(window.getSize().x / 2u, 900));
 
     // Start the game loop
     while (window.isOpen())
@@ -266,13 +255,13 @@ int main(int, char const **)
                 {
                     window.close();
                 }
-                else if (event.key.code == sf::Keyboard::Enter)
+                else if (event.key.code == sf::Keyboard::Enter) // start the game
                 {
                     hasGameStarted = true;
                     restartGame = false;
                     music.stop();
                 }
-                else if (event.key.code == sf::Keyboard::Space)
+                else if (event.key.code == sf::Keyboard::Space) //PowerUp/Launch Buzzy
                 {
                     if (power <= float(40))
                     {
@@ -284,13 +273,11 @@ int main(int, char const **)
                 {
                     buzzy.rotate(-10.f);
                     buzzyRotation = 360 - buzzy.getRotation();
-                    std::cout << buzzyRotation << ": " << buzzy.getRotation() << std::endl;
                 }
                 if (event.key.code == sf::Keyboard::Down)
                 {
                     buzzy.rotate(10.f);
                     buzzyRotation = 360 - buzzy.getRotation();
-                    std::cout << buzzyRotation << ": " << buzzy.getRotation() << std::endl;
                 }
                 break;
             case sf::Event::KeyReleased:
@@ -298,7 +285,7 @@ int main(int, char const **)
                 {
                     isBuzzyActive = true;
                 }
-                //
+
                 break;
 
             default:
@@ -306,7 +293,7 @@ int main(int, char const **)
             }
         }
 
-        if (buzzyLives.size()==0)
+        if (buzzyLives.size() == 0)
         {
             restartGame = true;
         }
@@ -338,49 +325,48 @@ int main(int, char const **)
             powerBar.setSize(Vector2f(powerBarWidthPerSecond * power, powerBarHeight));
 
             // Setup the bee
-                if (!beeActive)
+            if (!beeActive)
+            {
+
+                // How fast is the bee
+                srand((int)time(0) * 10);
+                beeSpeed = (rand() % 200) + 200;
+
+                srand((int)time(0) * 10);
+                float height = (rand() % 50) + 150;
+                insect.setPosition(1900, height);
+                beeActive = true;
+            }
+            else
+            // Move the bee
+            {
+
+                float heightInsect = distribution(generator);
+
+                insect.setPosition(insect.getPosition().x - (beeSpeed * dt.asSeconds()), insect.getPosition().y + (heightInsect * dt.asSeconds()));
+
+                // Has the bee reached the left hand edge of the screen?
+                if (insect.getPosition().x < 0)
                 {
-
-                    // How fast is the bee
-                    srand((int)time(0) * 10);
-                    beeSpeed = (rand() % 200) + 200;
-
-                    srand((int)time(0) * 10);
-                    float height = (rand() % 50) + 150;
-                    insect.setPosition(1900, height);
-                    beeActive = true;
+                    // Set it up ready to be a whole new bee next frame
+                    beeActive = false;
                 }
-                else
-                // Move the bee
-                {
-
-                    float heightInsect = distribution(generator);
-
-                    insect.setPosition(
-                        insect.getPosition().x -
-                            (beeSpeed * dt.asSeconds()),
-                        insect.getPosition().y + (heightInsect * dt.asSeconds()));
-
-                    // Has the bee reached the right hand edge of the screen?
-                    if (insect.getPosition().x < 0)
-                    {
-                        // Set it up ready to be a whole new cloud next frame
-                        beeActive = false;
-                    }
-                }
+            }
 
             sf::Time dt4 = clock2.restart();
 
             if (isBuzzyActive)
-            // Move the bee
+            // Move the buzzy
             {
                 if (power < 10)
                 {
-                    power = 10;
+                    power = 10; //Minimum power is 10
                 }
                 buzzySpeed = 1920 * power / 40;
 
                 motionTime += dt4.asSeconds();
+
+                //calculate velocity, set position, and rotate buzzy as hes flying across the screen
 
                 float vix = buzzySpeed * cos(buzzyRotation * PI / 180) * motionTime;
 
@@ -391,21 +377,23 @@ int main(int, char const **)
                 angle = (angle * PI / 180);
                 buzzy.setPosition(vix, 700 - vfy);
                 buzzy.rotate(angle);
-                
+
+                //collision with the bee
                 if (CollisionChecker(buzzy, insect))
                 {
                     score += 75;
                     displayBee = false;
                     resetBuzzy(buzzy);
                 }
-                
-                else if(firstRow.size()>0)
+
+                //collision with the rows
+                else if (firstRow.size() > 0)
                 {
                     for (auto woodAnim : firstRow)
                     {
-                        if(CollisionChecker(buzzy, woodAnim))
+                        if (CollisionChecker(buzzy, woodAnim))
                         {
-                            if (woodAnim.getOrigin().x == tiger.getOrigin().x && woodAnim.getOrigin().y == tiger.getOrigin().y )
+                            if (woodAnim.getOrigin().x == tiger.getOrigin().x && woodAnim.getOrigin().y == tiger.getOrigin().y)
                             {
                                 score += 25;
                                 firstRow.clear();
@@ -415,25 +403,23 @@ int main(int, char const **)
                             else
                             {
                                 resetBuzzy(buzzy);
-                                buzzyLives.pop_back();
                             }
                         }
                     }
-                    
                 }
-                else if (sndRow.size()>0)
+                else if (sndRow.size() > 0)
                 {
-//                    int i = 0;
-                    for (int i=0; i<sndRow.size();++i)
+                    //check for collision with unicorn, or mascott
+                    for (int i = 0; i < sndRow.size(); ++i)
                     {
-                        if(CollisionChecker(buzzy, sndRow[i]))
+                        if (CollisionChecker(buzzy, sndRow[i]))
                         {
-                            if (sndRow[i].getOrigin().x == gaBulldog.getOrigin().x && sndRow[i].getOrigin().y == gaBulldog.getOrigin().y )
+                            if (sndRow[i].getOrigin().x == gaBulldog.getOrigin().x && sndRow[i].getOrigin().y == gaBulldog.getOrigin().y)
                             {
                                 score += 25;
                                 sndRow.clear();
                                 resetBuzzy(buzzy);
-                                if (buzzyLives.size()>0 )
+                                if (buzzyLives.size() > 0)
                                 {
                                     firstRow.insert(firstRow.end(), {sheep, bunny, dog, tiger, mouse});
                                     sndRow.insert(sndRow.end(), {unicorn, frog, gaBulldog, pig, chicken});
@@ -443,34 +429,33 @@ int main(int, char const **)
                                 }
                                 break;
                             }
-                            else if (sndRow[i].getOrigin().x == unicorn.getOrigin().x && sndRow[i].getOrigin().y == unicorn.getOrigin().y )
+                            else if (sndRow[i].getOrigin().x == unicorn.getOrigin().x && sndRow[i].getOrigin().y == unicorn.getOrigin().y)
                             {
-                                auto lifeSize =buzzyLives.size();
-                                if (lifeSize<5)
+                                //add another life to buzzy if unicorn hit
+                                auto lifeSize = buzzyLives.size();
+                                if (lifeSize < 5)
                                 {
-                                    buzzyLives.push_back(buzzyLives[lifeSize-1]);
+                                    buzzyLives.push_back(buzzyLives[lifeSize - 1]);
                                 }
-                                sndRow.erase(sndRow.begin()+i);
+                                sndRow.erase(sndRow.begin() + i);
                                 resetBuzzy(buzzy);
                                 break;
                             }
                             else
                             {
                                 resetBuzzy(buzzy);
-                                buzzyLives.pop_back();
                             }
                         }
                     }
                 }
 
-                if (buzzy.getPosition().x >= 1920 || buzzy.getPosition().y >= 1200)
+                if (buzzy.getPosition().x >= 1860 || buzzy.getPosition().y >= 1080|| buzzy.getPosition().y<-30)
                 {
-                    // Set it up ready to be a whole new cloud next frame
+                    //Rest buzzy position if he doesnt hit anything
                     buzzyLives.pop_back();
                     resetBuzzy(buzzy);
                 }
             }
-            
         }
 
         //end of insect moving section
@@ -486,13 +471,16 @@ int main(int, char const **)
         // Draw the string
         window.draw(text);
 
+        //draw buzzy lives
         for (int i = 0; i < buzzyLives.size(); ++i)
         {
             buzzyLives[i].setPosition(200 + i * 65, 50);
             window.draw(buzzyLives[i]);
         }
-        
-        if (firstRow.size()>0) {
+
+        //draw the creatures and mascotts
+        if (firstRow.size() > 0)
+        {
             for (int i = 0; i < firstRow.size(); ++i)
             {
                 firstRow[i].setPosition(1500, 920 - i * 150);
@@ -500,25 +488,25 @@ int main(int, char const **)
             }
         }
 
-        
+        //draw the creatures and mascotts
         for (int i = 0; i < sndRow.size(); ++i)
         {
             sndRow[i].setPosition(1700, 920 - i * 150);
             window.draw(sndRow[i]);
         }
 
-        if (displayBee) {
+        //draw insect if it is not hit
+        if (displayBee)
+        {
             window.draw(insect);
         }
-        
+
         window.draw(powerBarShape);
         window.draw(powerBar);
         window.draw(powerText);
 
         window.draw(scoreText);
 
-        
-        
         window.draw(buzzy);
 
         if (!hasGameStarted)
@@ -535,6 +523,7 @@ int main(int, char const **)
     return EXIT_SUCCESS;
 }
 
+//This function help center the text at the beginning of the game
 void centerText(sf::Text &text)
 {
     auto center = Vector2f(text.getGlobalBounds().width / 2.f, text.getGlobalBounds().height);
@@ -543,6 +532,7 @@ void centerText(sf::Text &text)
     text.setOrigin(rounded);
 }
 
+//Set the origin of the creatures to center
 void setOriginToCenter(sf::Sprite &sprite)
 {
     auto center = Vector2f(sprite.getGlobalBounds().width / 2, sprite.getGlobalBounds().height / 2);
@@ -551,9 +541,10 @@ void setOriginToCenter(sf::Sprite &sprite)
     sprite.setOrigin(rounded);
 }
 
+//check for collision between two sprites
 bool CollisionChecker(sf::Sprite &buzzy, sf::Sprite &r2)
 {
-    
+
     if (buzzy.getGlobalBounds().intersects(r2.getGlobalBounds()))
     {
         return true;
@@ -562,11 +553,13 @@ bool CollisionChecker(sf::Sprite &buzzy, sf::Sprite &r2)
     return false;
 }
 
+//Round a vector
 sf::Vector2f round(const sf::Vector2f vector)
 {
     return sf::Vector2f{std::round(vector.x), std::round(vector.y)};
 }
 
+//Reset Buzzy's position, velocity and speed
 void resetBuzzy(sf::Sprite &buzzy)
 {
     buzzy.setPosition(-10, 700);
