@@ -40,9 +40,10 @@ std::default_random_engine generator;
 std::uniform_int_distribution<int> distribution(-1500, 1500);
 std::uniform_int_distribution<int> heightDist(150, 300);
 
-void centerText(sf::Text &text, RenderWindow &window);
-void gameOver();
+void centerText(sf::Text &text);
+void setOriginToCenter(sf::Sprite& sprite);
 sf::Vector2f round(const sf::Vector2f vector);
+bool CollisionChecker(sf::Sprite &buzzy, sf::Sprite &r2);
 
 //void gameUpdate (float speed, Sprite& buzzy, float t);
 
@@ -59,20 +60,24 @@ int main(int, char const **)
     sf::Texture buzzyLifeTexture;
     buzzyLifeTexture.loadFromFile(resourcePath() + "buzzy_life.png");
     std::vector<sf::Sprite> buzzyLives(5, sf::Sprite(buzzyLifeTexture));
+    
+    
 
     //Insect
     sf::Sprite insect;
     sf::Texture insectTexture;
     insectTexture.loadFromFile(resourcePath() + "insect.png");
     insect.setTexture(insectTexture);
-    insect.setPosition(0, 150);
+    setOriginToCenter(insect);
+    insect.setPosition(1900, 150);
 
     //buzzy
     sf::Sprite buzzy;
     sf::Texture buzzyTexture;
     buzzyTexture.loadFromFile(resourcePath() + "smallbuzzy.png");
     buzzy.setTexture(buzzyTexture);
-    buzzy.setPosition(-10, 700);
+    setOriginToCenter(buzzy);
+    buzzy.setPosition(0, 700);
 
     //first row
     sf::Sprite sheep;
@@ -129,6 +134,13 @@ int main(int, char const **)
     chicken.setTexture(chickenTexture);
 
     std::vector<sf::Sprite> sndRow{unicorn, frog, gaBulldog, pig, chicken};
+    
+    for(int i=0;i<sndRow.size();i++)
+    {
+        setOriginToCenter(firstRow[i]);
+        setOriginToCenter(sndRow[i]);
+        
+    }
 
     unsigned seed = 0;
 
@@ -141,10 +153,17 @@ int main(int, char const **)
     //Power Bar
     sf::RectangleShape powerBar;
     float powerBarStartWidth = 0;
-    float powerBarHeight = 80;
+    float powerBarHeight = 50;
     powerBar.setSize(Vector2f(powerBarStartWidth, powerBarHeight));
     powerBar.setFillColor(Color::Red);
-    powerBar.setPosition((1920 / 2) - 400 / 2, 980);
+    powerBar.setPosition(300, 980);
+    
+    sf::RectangleShape powerBarShape;
+    powerBarShape.setSize(Vector2f(410,50));
+    powerBarShape.setFillColor(Color::Transparent);
+    powerBarShape.setOutlineColor(Color::Black);
+    powerBarShape.setOutlineThickness(10);
+    powerBarShape.setPosition(300, 980);
 
     sf::Time gameTimeTotal;
     float power = 0.0f;
@@ -181,10 +200,15 @@ int main(int, char const **)
     sf::Text text("Lives ", font, 40);
     text.setFillColor(sf::Color::White);
     text.setPosition(50, 60);
+    
+    sf::Text powerText("Power ", font);
+    powerText.setFillColor(sf::Color::White);
+    centerText(powerText);
+    powerText.setPosition(200, 1020);
 
     sf::Text title("Buzzy's Revenge", font, 90);
     title.setFillColor(sf::Color::Red);
-    centerText(title, window);
+    centerText(title);
     title.setPosition(sf::Vector2f((window.getSize().x / 2u) - 50, 350));
 
     //center text
@@ -195,7 +219,7 @@ int main(int, char const **)
 
     sf::Text instructions(header + middle + middle2 + end, font, 50);
     instructions.setFillColor(sf::Color::White);
-    centerText(instructions, window);
+    centerText(instructions);
     instructions.setPosition(sf::Vector2f(window.getSize().x / 2u, 800));
 
     // Load a music to play
@@ -217,7 +241,7 @@ int main(int, char const **)
 
     sf::Text author("", font);
     author.setString("\t\tCreated by\n Ghaly Nicolas Jules");
-    centerText(author, window);
+    centerText(author);
     author.setPosition(sf::Vector2f(window.getSize().x / 2u, 900));
 
     // Start the game loop
@@ -245,11 +269,14 @@ int main(int, char const **)
                     hasGameStarted = true;
                     restartGame = false;
                     music.stop();
+//                    std::cout<<"origin x: "<<buzzy.getOrigin().x<<" GB left: "<<buzzy.getGlobalBounds().left<<" GB width: "<<buzzy.getGlobalBounds().width<<"position x: "<<buzzy.getPosition().x<<std::endl;
+//                    std::cout<<"origin y: "<<buzzy.getOrigin().y<<" GB top: "<<buzzy.getGlobalBounds().top<<" GB Height: "<<buzzy.getGlobalBounds().height<<"position y: "<<buzzy.getPosition().y<<std::endl;
+//                    std::cout<<"origin y: "<<buzzy.getOrigin().y<<" GB top: "<<buzzy.getGlobalBounds().top<<"position: "<<std::endl;
+                    std::cout<<"origin x: "<<insect.getOrigin().x<<" GB left: "<<insect.getGlobalBounds().left<<std::endl;
                 }
                 else if (event.key.code == sf::Keyboard::R)
                 {
                     restartGame = true;
-                    //                    gameOver();
                 }
                 else if (event.key.code == sf::Keyboard::Space)
                 {
@@ -365,24 +392,24 @@ int main(int, char const **)
 
                     float vfy = viy * motionTime + 0.5 * gravity * motionTime * motionTime;
                     float angle = atan2(vix, vfy);
-                    angle = 0.01+(angle * PI / 180);
+                    angle = (angle * PI / 180);
                     buzzy.setPosition(vix, 700 - vfy);
                     buzzy.rotate(angle);
-                    std::cout << "BuzzyX: " << angle << std::endl
-                              << std::endl;
 
-                    if (buzzy.getPosition().x >= 1920 || buzzy.getPosition().y >= 1200)
+                    if ((CollisionChecker(buzzy, insect))||buzzy.getPosition().x >= 1920 || buzzy.getPosition().y >= 1200)
                     {
                         // Set it up ready to be a whole new cloud next frame
+                        if (CollisionChecker(buzzy, insect)) {
+                            std::cout<<buzzy.getPosition().x <<" ANMWEEEEYYYYY "<<buzzy.getOrigin().x << std::endl;
+                        }
                         std::cout << "YYY: " << buzzy.getPosition().x << " Y: " << buzzy.getPosition().y << std::endl;
-                        //                    trial = false;
                         buzzy.setPosition(-10, 700);
-                        //                    isGamePaused = true;
                         isBuzzyActive = false;
                         motionTime = 0;
                         buzzy.setRotation(0);
                         buzzySpeed = 0;
                         power = 0;
+                        
                     }
                 }
             }
@@ -418,7 +445,9 @@ int main(int, char const **)
         }
 
         window.draw(insect);
+        window.draw(powerBarShape);
         window.draw(powerBar);
+        window.draw(powerText);
 
         window.draw(scor);
 
@@ -438,22 +467,40 @@ int main(int, char const **)
     return EXIT_SUCCESS;
 }
 
-void centerText(sf::Text &text, RenderWindow &window)
+void centerText(sf::Text &text)
 {
     auto center = Vector2f(text.getGlobalBounds().width / 2.f, text.getGlobalBounds().height);
     auto localBounds = center + sf::Vector2f(text.getLocalBounds().left, text.getLocalBounds().top);
     auto rounded = round(localBounds);
     text.setOrigin(rounded);
-    text.setPosition(sf::Vector2f(window.getSize().x / 2u, 800));
+//    text.setPosition(sf::Vector2f(window.getSize().x / 2u, 800));
 }
 
-//void gameOver()
-//{
-//    motionTime =0;
-//    hasGameStarted = false;
-//    beeActive = false;
-//
-//}
+void setOriginToCenter(sf::Sprite& sprite)
+{
+    auto center = Vector2f(sprite.getGlobalBounds().width/2,  sprite.getGlobalBounds().height/2);
+    auto localBounds = center+sf::Vector2f(sprite.getGlobalBounds().left,sprite.getGlobalBounds().top);
+    auto rounded = round(localBounds);
+    sprite.setOrigin(rounded);
+}
+
+bool CollisionChecker(sf::Sprite &buzzy, sf::Sprite &r2)
+{
+    float r2Bottom = r2.getPosition().y+r2.getOrigin().y;
+    float buzzyBottom = buzzy.getPosition().y+buzzy.getOrigin().y;
+    
+    float buzzyRight = buzzy.getPosition().x+buzzy.getOrigin().x;
+    float r2Left = r2.getGlobalBounds().left;
+    
+    if((buzzy.getPosition().x+buzzy.getOrigin().x > r2Left)
+    && (buzzy.getGlobalBounds().top <= r2Bottom) && (r2.getGlobalBounds().top -buzzyBottom < 85) && (buzzyRight - r2Left < buzzy.getGlobalBounds().width) ){
+        return true;
+    }
+
+    return false;
+}
+
+
 
 sf::Vector2f round(const sf::Vector2f vector)
 {
