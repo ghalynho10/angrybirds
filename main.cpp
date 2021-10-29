@@ -273,7 +273,7 @@ int main(int, char const **)
                 {
                     hasGameStarted = true;
                     restartGame = false;
-//                    music.stop();
+                    music.stop();
                 }
                 else if (event.key.code == sf::Keyboard::Space) //PowerUp/Launch Buzzy
                 {
