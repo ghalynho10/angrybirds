@@ -165,14 +165,6 @@ int main(int, char const **)
 
     float powerBarWidthPerSecond = 10;
 
-    // Set the Icon
-    sf::Image icon;
-    if (!icon.loadFromFile(resourcePath() + "icon.png"))
-    {
-        return EXIT_FAILURE;
-    }
-    window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
-
     // Load background
     sf::Texture texture;
     if (!texture.loadFromFile(resourcePath() + "background.png"))
@@ -221,15 +213,37 @@ int main(int, char const **)
     centerText(author);
     author.setPosition(sf::Vector2f(window.getSize().x / 2u, 900));
 
-    // Load a music to play
-    sf::Music music;
-    if (!music.openFromFile(resourcePath() + "nice_music.ogg"))
-    {
-        return EXIT_FAILURE;
-    }
+    
+    // Prepare the sound
+        SoundBuffer hitBuffer;
+        hitBuffer.loadFromFile(resourcePath() + "chop.wav");
+        Sound collision;
+        collision.setBuffer(hitBuffer);
 
-    // Play the music
-    music.play();
+        SoundBuffer launchBuffer;
+        launchBuffer.loadFromFile(resourcePath() + "launching.wav");
+        Sound launch;
+        launch.setBuffer(launchBuffer);
+    
+        SoundBuffer winBuffer;
+        winBuffer.loadFromFile(resourcePath() + "won.wav");
+        Sound win;
+        win.setBuffer(winBuffer);
+
+        // Out of time
+        SoundBuffer gameOverBuffer;
+        gameOverBuffer.loadFromFile(resourcePath() + "game_over.wav");
+        Sound gameOver;
+        gameOver.setBuffer(gameOverBuffer);
+    
+    // Load a music to play
+        sf::SoundBuffer musicBuffer;
+        musicBuffer.loadFromFile(resourcePath() + "nice_music.ogg");
+        Sound music;
+        music.setBuffer(musicBuffer);
+
+//     Play the music
+        music.play();
 
     // Variables to control time itself
     sf::Clock clock;
@@ -259,7 +273,7 @@ int main(int, char const **)
                 {
                     hasGameStarted = true;
                     restartGame = false;
-                    music.stop();
+//                    music.stop();
                 }
                 else if (event.key.code == sf::Keyboard::Space) //PowerUp/Launch Buzzy
                 {
@@ -284,6 +298,7 @@ int main(int, char const **)
                 if (event.key.code == sf::Keyboard::Space)
                 {
                     isBuzzyActive = true;
+                    launch.play();
                 }
 
                 break;
@@ -296,6 +311,7 @@ int main(int, char const **)
         if (buzzyLives.size() == 0)
         {
             restartGame = true;
+            gameOver.play();
         }
 
         if (restartGame)
@@ -309,6 +325,7 @@ int main(int, char const **)
             buzzySpeed = 0;
             hasGameStarted = false;
             score = 0;
+            restartGame = false;
             firstRow.clear();
             sndRow.clear();
             buzzyLives.clear();
@@ -381,6 +398,8 @@ int main(int, char const **)
                 //collision with the bee
                 if (CollisionChecker(buzzy, insect))
                 {
+                    launch.stop();
+                    collision.play();
                     score += 75;
                     displayBee = false;
                     resetBuzzy(buzzy);
@@ -393,6 +412,8 @@ int main(int, char const **)
                     {
                         if (CollisionChecker(buzzy, woodAnim))
                         {
+                            launch.stop();
+                            collision.play();
                             if (woodAnim.getOrigin().x == tiger.getOrigin().x && woodAnim.getOrigin().y == tiger.getOrigin().y)
                             {
                                 score += 25;
@@ -414,6 +435,8 @@ int main(int, char const **)
                     {
                         if (CollisionChecker(buzzy, sndRow[i]))
                         {
+                            launch.stop();
+                            collision.play();
                             if (sndRow[i].getOrigin().x == gaBulldog.getOrigin().x && sndRow[i].getOrigin().y == gaBulldog.getOrigin().y)
                             {
                                 score += 25;
@@ -421,6 +444,7 @@ int main(int, char const **)
                                 resetBuzzy(buzzy);
                                 if (buzzyLives.size() > 0)
                                 {
+                                    win.play();
                                     firstRow.insert(firstRow.end(), {sheep, bunny, dog, tiger, mouse});
                                     sndRow.insert(sndRow.end(), {unicorn, frog, gaBulldog, pig, chicken});
                                     resetBuzzy(buzzy);
@@ -452,6 +476,7 @@ int main(int, char const **)
                 if (buzzy.getPosition().x >= 1860 || buzzy.getPosition().y >= 1080|| buzzy.getPosition().y<-30)
                 {
                     //Rest buzzy position if he doesnt hit anything
+                    launch.stop();
                     buzzyLives.pop_back();
                     resetBuzzy(buzzy);
                 }
